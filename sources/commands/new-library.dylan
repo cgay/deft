@@ -333,7 +333,7 @@ run-test-application()
 define constant $dylan-package-file-template
   = #:string:'{
     "dependencies": [ %s ],
-    "dev-dependencies": [ "testworks" ],
+    "dev-dependencies": [ %s ],
     "description": "YOUR DESCRIPTION HERE",
     "name": %=,
     "version": "0.1.0",
@@ -367,13 +367,9 @@ end function;
 define function make-dylan-library
     (name :: <string>, dir :: <directory-locator>, exe? :: <bool>, deps :: <seq>,
      force-package? :: <bool>, simple? :: <bool>, git? :: <bool>)
-  local method dep-string (dep)
-          format-to-string("%=", pm/dep-to-string(dep))
-        end;
   let file = curry(file-locator, dir);
   let test-file = curry(file-locator, dir, "tests");
   let test-name = concat(name, "-test-suite");
-  let deps-string = join(map-as(<vector>, dep-string, deps), ", ");
   let base-library-templates
     = list(make(<template>,
                 library-name: name,
@@ -456,12 +452,17 @@ define function make-dylan-library
     verbose("Edit %s if you need to change dependencies or if you plan"
               " to publish this library as a package.",
             new-pkg-file);
+    local method dep-string (dep)
+            format-to-string("%=", pm/dep-to-string(dep))
+          end;
+    let deps = join(map-as(<vector>, dep-string, deps), ", ");
+    let dev-deps = iff(simple?, "", "\"testworks\"");
     templates
       := add(templates,
              make(<template>,
                   output-file: new-pkg-file,
                   format-string: $dylan-package-file-template,
-                  format-arguments: list(deps-string, name)));
+                  format-arguments: list(deps, dev-deps, name)));
   end;
   for (template in templates)
     write-template(template);
